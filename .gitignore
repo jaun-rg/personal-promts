@@ -1,0 +1,19 @@
+# Ignorar todo por defecto
+*
+
+# No ignorar archivos .promt.md en ningún nivel
+!*.promt.md
+!*/*.promt.md
+!*/*/*.promt.md
+!*/*/*/*.promt.md
+!*/*/*/*/*.promt.md
+!*/*/*/*/*/*.promt.md
+!*/*/*/*/*/*/*.promt.md
+
+# No ignorar estos archivos
+!.gitignore
+!update_promts.sh
+
+# Ignorar directorios .git y archivos .gitignore en subcarpetas
+**/.git/
+**/.gitignore
