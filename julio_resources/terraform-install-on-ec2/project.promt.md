@@ -1,0 +1,138 @@
+Este es un proyecto de Terraform para la creación y aprovisionamiento de instancias EC2 en AWS con las siguientes características:
+
+- Este proyecto permite crear instancias EC2 y aprovisionarlas con diversas dependencias y recursos
+- Provider: AWS
+- Soporte para 2 regiones:
+    - us-east-1
+    - us-west-2
+- Dependencias principales:
+    - terraform-aws-modules/ec2-instance/aws: Módulo oficial para la creación de instancias EC2
+    - Terraform >= 0.14.x
+    - AWS CLI configurado con credenciales apropiadas
+    - Ansible (para módulos de aprovisionamiento basados en Ansible)
+- Módulos principales:
+  - base/vpc: Creación de VPC, subredes, internet gateway y grupos de seguridad
+  - base/ec2: Gestión de instancias EC2
+    - Usa terraform-aws-modules/ec2-instance/aws para crear las instancias
+    - Genera el nombre de la instancia usando el formato {key}-{index} donde:
+      - key: el nombre del elemento en el mapa de instancias
+      - index: el índice de la instancia (0, 1, 2, etc.)
+    - Soporta la creación de múltiples instancias con la misma configuración mediante el parámetro "count"
+    - Genera automáticamente una clave SSH si no se especifica una
+    - Recibe un mapa de instancias a crear, cada una con:
+      - instance_type: Tipo de instancia EC2 (default: t2.micro)
+      - modules: Lista de módulos a instalar (default: [])
+      - count: Número de instancias a crear (default: 1)
+    - Descubre recursivamente todos los módulos disponibles en install-on-ec2
+    - El programador no modificará este modulo cuando se agregan nuevos módulos a los Módulos de instalación (install-on-ec2)
+- Módulos de instalación (install-on-ec2):
+  - java: Instalación de Java en EC2 mediante script directo
+  - node: Instalación de Node.js en EC2 mediante script directo
+  - docker: Instalación de Docker en EC2 mediante script directo
+  - jenkins-slave: Configuración completa de un esclavo de Jenkins
+    - Instalación de Terraform
+    - Instalación de Ansible
+    - Configuración del EC2 para funcionar como esclavo de Jenkins usando agent.jar
+  - ansible/java: Instalación de Java en EC2 usando Ansible con playbook.yml separado
+  - ansible/node: Instalación de Node.js en EC2 usando Ansible con playbook.yml separado
+  - ansible/docker: Instalación de Docker en EC2 usando Ansible con playbook.yml separado
+- Estructura por región:
+    - Las regiones están dentro de una carpeta llamada "regions"
+    - Cada región tiene su propio conjunto de archivos:
+        - main.tf: Configuración principal de la región
+        - variables.tf: Variables específicas de la región
+        - outputs.tf: Salidas específicas de la región
+        - locals.tf: Valores locales para la región
+        - terraform.tfvars: Valores de variables para la región
+        - Estado de Terraform independiente para cada región
+- Ejecución por región:
+    - Posibilidad de ejecutar Terraform por región sin modificar el main.tf en la raíz
+    - Cada región tiene su propio backend local
+    - Capacidad para inicializar, planificar y aplicar cambios solo para una región específica
+    - Capacidad para destruir recursos solo para una región específica
+- Configuración específica por región:
+    - us-east-1:
+        - Instancia "test1":
+            - Módulos a instalar:
+                - java
+                - node
+                - docker
+            - count: 1
+        - Instancia "bastion":
+            - Módulos a instalar:
+                - jenkins-slave
+            - count: 1
+    - us-west-2:
+        - Instancia "test2":
+            - Módulos a instalar:
+                - ansible/java
+                - ansible/node
+                - ansible/docker
+            - count: 1
+        - Instancia "bastion":
+            - Módulos a instalar:
+                - jenkins-slave
+            - count: 1
+- Incluir README.md con la siguiente información:
+  - Descripción del proyecto
+  - Características
+    - Soporte para múltiples regiones
+    - Arquitectura modular
+    - Configuración de VPC y redes
+    - Creación de instancias EC2 con descubrimiento dinámico de módulos
+    - Generación automática de claves SSH
+    - Opciones de aprovisionamiento (script y Ansible)
+    - Soporte para diferentes tipos de instalaciones
+  - Estructura de directorios
+  	- descripcion de cada directorio y archivo principal
+  - Lista de dependencias
+  - Instrucciones de instalación
+  - Instrucciones de ejecución
+    - Despliegue en ambas regiones
+    - Despliegue en una región específica
+    - Destrucción de recursos
+  - Referencias y recursos adicionales
+  - Anexo:
+    - Ejecución por Región sin Modificar main.tf
+        - Estructura para Ejecución por Región
+        - Pasos para Ejecutar por Región
+        - Ventajas de este Enfoque
+        - Ejemplo de Uso
+    - Crear Módulos para Instalar Dependencias en EC2
+        - Estructura Básica de un Módulo de Instalación
+        - Variables Requeridas
+        - Instalación mediante Script
+        - Instalación mediante Ansible
+        - Uso de los Módulos
+
+- Incluir un diagrama de arquitectura en draw.io con lo siguiente:
+  - Nombre: architecture
+  - Ubicación: docs/diagrams/architecture/
+  - Formato: PNG editable por draw.io
+  - Componentes:
+    - Un bloque general llamado "External Services" donde estén todos los servicios que no son de AWS
+      - GitHub
+    - Un bloque "AWS Cloud" que contenga todo lo de AWS
+      - 2 regiones
+          - us-east-1
+          - us-west-2
+      - En cada región
+        - Bloque VPC con public y private subnets
+          - 1 EC2 con Terraform, Ansible y el cual será un Jenkins esclavo (slave), asociado a los demás EC2 y a S3
+          - 1 EC2 con Node.js
+          - 1 EC2 con Java
+        - Bloque general llamado "Services" con un S3 bucket
+      - Solo en us-east-1
+        - 1 EC2 con Jenkins que sea maestro en la subnet privada
+          - Este EC2 se conecta a los esclavos de ambas regiones
+          - Este esclavo se conecta a GitHub, el cual es un servicio fuera de AWS
+          - Se necesita representar que un job de Jenkins se puede ejecutar manualmente o por un cambio en la rama main del repo de GitHub
+      - Un bloque general llamado "Global Services" con
+        - Un CloudFront asociado a Jenkins master
+        - Route 53 asociado a CloudFront y con host jenkins.patito.com
+    - Adicionales
+      - Todas las etiquetas y textos en inglés
+      - Representar que Jenkins master se conecte a los esclavos de ambas regiones agregando todos los elementos faltantes para representar esta conexión
+      - Incluir elementos de red como Internet Gateways y asociaciones
+      - Incluir servicios tanto internos como externos necesarios
+    - Este diagrama es una representación de la arquitectura en donde se ejecutará este proyecto
